@@ -11,8 +11,9 @@ class Serie(BaseModel):
     ano: int
     id_categoria: int
 
-@router.post("/")
-def criar_serie(serie: Serie):
+# POST via JSON
+@router.post("/json")
+def criar_serie_json(serie: Serie):
     try:
         conn = get_connection()
         cursor = conn.cursor()
@@ -24,7 +25,7 @@ def criar_serie(serie: Serie):
         conn.commit()
         novo_id = cursor.lastrowid
 
-        return {"id": novo_id, "mensagem": "Série criada com sucesso"}
+        return {"id": novo_id, "mensagem": "Série criada com sucesso (JSON)"}
 
     except Error as e:
         raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
@@ -36,36 +37,12 @@ def criar_serie(serie: Serie):
         except:
             pass
 
-@router.get("/")
-def listar_series():
-    try:
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-
-        cursor.execute("SELECT * FROM serie")
-        series = cursor.fetchall()
-
-        return series
-
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
-
-    finally:
-        try:
-            cursor.close()
-            conn.close()
-        except:
-            pass  # Caso a conexão nem tenha sido estabelecida
-
-
-@router.post("/")
-def criar_serie(
+# POST via Form
+@router.post("/form")
+def criar_serie_form(
     titulo: str = Form(...),
     descricao: str = Form(...),
-    ano: int = Form(...),  # <- corrigido aqui
+    ano: int = Form(...),
     id_categoria: int = Form(...)
 ):
     try:
@@ -79,13 +56,32 @@ def criar_serie(
         conn.commit()
         novo_id = cursor.lastrowid
 
-        return {"id": novo_id, "mensagem": "Série criada com sucesso"}
+        return {"id": novo_id, "mensagem": "Série criada com sucesso (Form)"}
 
     except Error as e:
         raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
 
-    except Exception as e:
-        raise HTTPException(status_code=500, detail=f"Erro inesperado: {str(e)}")
+    finally:
+        try:
+            cursor.close()
+            conn.close()
+        except:
+            pass
+
+# GET - listar todas as séries
+@router.get("/")
+def listar_series():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+
+        cursor.execute("SELECT * FROM serie")
+        series = cursor.fetchall()
+
+        return series
+
+    except Error as e:
+        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
 
     finally:
         try:
