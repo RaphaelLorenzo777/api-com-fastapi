@@ -31,3 +31,15 @@ def listar_atores():
     finally:
         cursor.close()
         conn.close()
+@router.get("/")
+def listar_atores():
+    try:
+        conn = get_connection()
+        cursor = conn.cursor(dictionary=True)
+        cursor.execute("SELECT * FROM ator")
+        return cursor.fetchall()
+    except Error as e:
+        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
+    finally:
+        cursor.close()
+        conn.close()
