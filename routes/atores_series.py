@@ -2,6 +2,7 @@ from fastapi import APIRouter, HTTPException
 from mysql.connector import Error
 from models.models import Ator_Serie
 from models.database import get_connection
+from app.main import erro_404
 
 router = APIRouter(prefix="/atores_series")
 
