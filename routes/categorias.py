@@ -1,65 +1,53 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Response, status
 from mysql.connector import Error
 from models.models import Categoria
 from models.database import get_connection
 
 router = APIRouter(prefix="/categorias")
 
+def executar_query(query, params=None, fetch=False, dictionary=False):
+    try:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=dictionary) as cursor:
+                cursor.execute(query, params or ())
+                if fetch:
+                    return cursor.fetchall()
+                conn.commit()
+                return cursor
+    except Error as e:
+        return Response(
+            content=f"Erro de banco de dados: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 @router.post("/")
 def criar_categoria(categoria: Categoria):
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO ator (id, nome) VALUES (%s, %s)", (categoria.id, categoria.nome))
-        conn.commit()
-        return {"id": cursor.lastrowid, "mensagem": "Categoria criado com sucesso"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-    finally:
-        cursor.close()
-        conn.close()
+    query = "INSERT INTO categoria (id, nome) VALUES (%s, %s)"
+    params = (categoria.id, categoria.nome)
+    cursor = executar_query(query, params)
+    return {"id": cursor.lastrowid, "mensagem": "Categoria criada com sucesso"}
 
 @router.get("/")
 def listar_categorias():
-    try:
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM categoria")
-        return cursor.fetchall()
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-    finally:
-        cursor.close()
-        conn.close()
+    query = "SELECT * FROM categoria"
+    return executar_query(query, fetch=True, dictionary=True)
 
-router.put("/")
+@router.put("/")
 def atualizar_categoria(categoria: Categoria):
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE categoria SET nome = %s WHERE id = %s", (categoria.nome, categoria.id))
-        conn.commit()
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Categoria não encontrado")
-        return {"mensagem": "Categoria atualizado com sucesso"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-    finally:
-        cursor.close()
-        conn.close()
+    query = "UPDATE categoria SET nome = %s WHERE id = %s"
+    params = (categoria.nome, categoria.id)
+    cursor = executar_query(query, params)
+    if isinstance(cursor, Response) or cursor.rowcount == 0:
+        return Response(content="Categoria não encontrada", status_code=status.HTTP_404_NOT_FOUND)
+    return {"mensagem": "Categoria atualizada com sucesso"}
 
 @router.delete("/")
 def deletar_categoria(id: int):
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM categoria WHERE id = %s", (id,))
-        conn.commit()
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="Categoria não encontrado")
-        return {"mensagem": "Categoria deletado com sucesso"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-    finally:
-        cursor.close()
-        conn.close()
+    query = "DELETE FROM categoria WHERE id = %s"
+    params = (id,)
+    cursor = executar_query(query, params)
+    if isinstance(cursor, Response) or cursor.rowcount == 0:
+        return Response(content="Categoria não encontrada", status_code=status.HTTP_404_NOT_FOUND)
+    return {"mensagem": "Categoria deletada com sucesso"}
+
+

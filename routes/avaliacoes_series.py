@@ -1,65 +1,51 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Response, status
 from mysql.connector import Error
 from models.models import Avaliacao_Serie
 from models.database import get_connection
 
 router = APIRouter(prefix="/avaliacoes_series")
 
+def executar_query(query, params=None, fetch=False, dictionary=False):
+    try:
+        with get_connection() as conn:
+            with conn.cursor(dictionary=dictionary) as cursor:
+                cursor.execute(query, params or ())
+                if fetch:
+                    return cursor.fetchall()
+                conn.commit()
+                return cursor
+    except Error as e:
+        return Response(
+            content=f"Erro de banco de dados: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
+
 @router.post("/")
 def criar_avaliacao_serie(avaliacao_serie: Avaliacao_Serie):
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("INSERT INTO ator (id, id_serie, nota, comentario, data_avaliacao) VALUES (%s, %s, %s, %s, %s)", (avaliacao_serie.id, avaliacao_serie.id_serie, avaliacao_serie.nota, avaliacao_serie.comentario, avaliacao_serie.data_avaliacao))
-        conn.commit()
-        return {"id": cursor.lastrowid, "mensagem": "avaliacao_serie criado com sucesso"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-    finally:
-        cursor.close()
-        conn.close()
+    query = "INSERT INTO avaliacao_serie (id, id_serie, nota, comentario, data_avaliacao) VALUES (%s, %s, %s, %s, %s)"
+    params = (avaliacao_serie.id, avaliacao_serie.id_serie, avaliacao_serie.nota, avaliacao_serie.comentario, avaliacao_serie.data_avaliacao)
+    cursor = executar_query(query, params)
+    return {"id": cursor.lastrowid, "mensagem": "Avaliacao_Serie criado com sucesso"}
 
 @router.get("/")
 def listar_avaliacoes_series():
-    try:
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=True)
-        cursor.execute("SELECT * FROM avaliacao_serie")
-        return cursor.fetchall()
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-    finally:
-        cursor.close()
-        conn.close()
+    query = "SELECT * FROM avaliacao_serie"
+    return executar_query(query, fetch=True, dictionary=True)
 
 @router.put("/")
 def atualizar_avaliacao_serie(avaliacao_serie: Avaliacao_Serie):
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("UPDATE avaliacao_serie SET nota = %s, comentario = %s, data_avaliacao = %s WHERE id = %s AND id_serie = %s", (avaliacao_serie.nota, avaliacao_serie.comentario, avaliacao_serie.data_avaliacao, avaliacao_serie.id, avaliacao_serie.id_serie))
-        conn.commit()
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="avaliacao_serie não encontrado")
-        return {"mensagem": "avaliacao_serie atualizado com sucesso"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-    finally:
-        cursor.close()
-        conn.close()
+    query = "UPDATE avaliacao_serie SET nota = %s, comentario = %s, data_avaliacao = %s WHERE id = %s AND id_serie = %s"
+    params = (avaliacao_serie.nota, avaliacao_serie.comentario, avaliacao_serie.data_avaliacao, avaliacao_serie.id, avaliacao_serie.id_serie)
+    cursor = executar_query(query, params)
+    if isinstance(cursor, Response) or cursor.rowcount == 0:
+        return Response(content="Avaliacao_Serie não encontrado", status_code=status.HTTP_404_NOT_FOUND)
+    return {"mensagem": "Avaliacao_Serie atualizado com sucesso"}
 
 @router.delete("/")
 def deletar_avaliacao_serie(id: int):
-    try:
-        conn = get_connection()
-        cursor = conn.cursor()
-        cursor.execute("DELETE FROM avaliacao_serie WHERE id = %s", (id,))
-        conn.commit()
-        if cursor.rowcount == 0:
-            raise HTTPException(status_code=404, detail="avaliacao_serie não encontrado")
-        return {"mensagem": "avaliacao_serie deletado com sucesso"}
-    except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-    finally:
-        cursor.close()
-        conn.close()
+    query = "DELETE FROM avaliacao_serie WHERE id = %s"
+    params = (id,)
+    cursor = executar_query(query, params)
+    if isinstance(cursor, Response) or cursor.rowcount == 0:
+        return Response(content="Avaliacao_Serie não encontrado", status_code=status.HTTP_404_NOT_FOUND)
+    return {"mensagem": "Avaliacao_Serie deletado com sucesso"}

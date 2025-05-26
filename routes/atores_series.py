@@ -1,29 +1,24 @@
-from fastapi import APIRouter, HTTPException
+from fastapi import APIRouter, Response, status
 from mysql.connector import Error
 from models.models import Ator_Serie
 from models.database import get_connection
-from app.main import erro_404
 
 router = APIRouter(prefix="/atores_series")
 
 def executar_query(query, params=None, fetch=False, dictionary=False):
-    conn = None
-    cursor = None
     try:
-        conn = get_connection()
-        cursor = conn.cursor(dictionary=dictionary)
-        cursor.execute(query, params or ())
-        if fetch:
-            return cursor.fetchall()
-        conn.commit()
-        return cursor
+        with get_connection() as conn:
+            with conn.cursor(dictionary=dictionary) as cursor:
+                cursor.execute(query, params or ())
+                if fetch:
+                    return cursor.fetchall()
+                conn.commit()
+                return cursor
     except Error as e:
-        raise HTTPException(status_code=500, detail=f"Erro de banco de dados: {str(e)}")
-    finally:
-        if cursor:
-            cursor.close()
-        if conn:
-            conn.close()
+        return Response(
+            content=f"Erro de banco de dados: {str(e)}",
+            status_code=status.HTTP_500_INTERNAL_SERVER_ERROR
+        )
 
 @router.post("/")
 def criar_ator_serie(ator_serie: Ator_Serie):
@@ -42,8 +37,8 @@ def atualizar_ator_serie(ator_serie: Ator_Serie):
     query = "UPDATE ator_serie SET personagem = %s WHERE id_ator = %s AND id_serie = %s"
     params = (ator_serie.personagem, ator_serie.id_ator, ator_serie.id_serie)
     cursor = executar_query(query, params)
-    if cursor.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Ator_serie não encontrado")
+    if isinstance(cursor, Response) or cursor.rowcount == 0:
+        return Response(content="Ator_serie não encontrado", status_code=status.HTTP_404_NOT_FOUND)
     return {"mensagem": "Ator_serie atualizado com sucesso"}
 
 @router.delete("/")
@@ -51,6 +46,7 @@ def deletar_ator_serie(id_ator: int, id_serie: int):
     query = "DELETE FROM ator_serie WHERE id_ator = %s AND id_serie = %s"
     params = (id_ator, id_serie)
     cursor = executar_query(query, params)
-    if cursor.rowcount == 0:
-        raise HTTPException(status_code=404, detail="Ator_serie não encontrado")
+    if isinstance(cursor, Response) or cursor.rowcount == 0:
+        return Response(content="Ator_serie não encontrado", status_code=status.HTTP_404_NOT_FOUND)
     return {"mensagem": "Ator_serie deletado com sucesso"}
+
