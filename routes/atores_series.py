@@ -3,7 +3,7 @@ from mysql.connector import Error
 from models.models import Ator_Serie
 from database import get_connection
 
-router = APIRouter(prefix="/atores_series")
+router = APIRouter()
 
 def executar_query(query, params=None, fetch=False, dictionary=False):
     try:

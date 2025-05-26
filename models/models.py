@@ -1,20 +1,19 @@
-from pydantic import BaseModel, conint
 import datetime
-from typing import Optional
+from pydantic import BaseModel
 
 class Serie(BaseModel):
-    id: Optional[int] = None
+    id: int
     titulo: str
     descricao: str
     ano: int
     id_categoria: int
 
 class Categoria(BaseModel):
-    id: Optional[int] = None
+    id: int
     nome: str
 
 class Ator(BaseModel):
-    id: Optional[int] = None
+    id: int
     nome: str
 
 class Ator_Serie(BaseModel):
@@ -23,13 +22,13 @@ class Ator_Serie(BaseModel):
     personagem: str
 
 class Avaliacao_Serie(BaseModel):
-    id: Optional[int] = None
+    id: int
     id_serie: int
-    nota: conint(ge=0, le=10)  
+    nota: int
     comentario: str
-    data_avaliacao: datetime.datetime
+    data_avaliacao: datetime.date
 
 class Motivo_Assistir(BaseModel):
-    id: Optional[int] = None
+    id: int
     id_serie: int
     motivo: str
