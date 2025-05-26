@@ -1,7 +1,7 @@
 from fastapi import APIRouter, Response, status
 from mysql.connector import Error
 from models.models import Ator_Serie
-from models.database import get_connection
+from database import get_connection
 
 router = APIRouter(prefix="/atores_series")
 
